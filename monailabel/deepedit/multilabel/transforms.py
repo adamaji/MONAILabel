@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from cProfile import label
 import json
 import logging
 import random
@@ -631,9 +632,12 @@ class PosNegClickProbAddRandomGuidanceCustomd(Randomizable, MapTransform):
             logger.info(f"Number of simulated clicks: {num_clicks}")
             counter = 0
             keep_guidance = []
+            label_names = list(d["label_names"].keys())
             while True:
-                aux_label = random.choice(list(d["label_names"].keys()))
+                aux_label = random.choice(label_names)
                 if aux_label in keep_guidance:
+                    if len(keep_guidance) >= len(label_names):
+                        break
                     pass
                 else:
                     keep_guidance.append(aux_label)
