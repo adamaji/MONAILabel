@@ -346,6 +346,26 @@
         </property>
        </widget>
       </item>
+      <item row="2" column="0">
+        <widget class="QLabel" name="autoSegmentationROILabel">
+        <property name="text">
+          <string>ROI:</string>
+        </property>
+        </widget>
+      </item>
+      <item row="2" column="1">
+        <widget class="qSlicerMarkupsPlaceWidget" name="autoSegmentationPlaceWidget">
+        <property name="placeMultipleMarkups">
+          <enum>qSlicerMarkupsPlaceWidget::ForcePlaceSingleMarkup</enum>
+        </property>
+        <property name="sizePolicy">
+          <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+          </sizepolicy>
+        </property>
+        </widget>
+      </item>
      </layout>
     </widget>
    </item>

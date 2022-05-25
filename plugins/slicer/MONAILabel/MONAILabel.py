@@ -204,6 +204,7 @@ class MONAILabelWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         self._volumeNode = None
         self._segmentNode = None
         self._scribblesROINode = None
+        self._autoSegROINode = None
         self._volumeNodes = []
         self._updatingGUIFromParameterNode = False
         self._scribblesEditorWidget = None
@@ -341,6 +342,11 @@ class MONAILabelWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         self.ui.scribblesCollapsibleButton.setEnabled(False)
         self.ui.scribblesCollapsibleButton.collapsed = True
 
+        # ROI placement for auto seg
+        self.ui.autoSegmentationPlaceWidget.setButtonsVisible(False)
+        self.ui.autoSegmentationPlaceWidget.placeButton().show()
+        self.ui.autoSegmentationPlaceWidget.setMRMLScene(slicer.mrmlScene)
+
         # embedded segment editor
         self.ui.embeddedSegmentEditorWidget.setMRMLScene(slicer.mrmlScene)
         self.ui.embeddedSegmentEditorWidget.setSegmentationNodeSelectorVisible(False)
@@ -389,6 +395,7 @@ class MONAILabelWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         self.setParameterNode(None)
         self.current_sample = None
         self.samples.clear()
+        self._autoSegROINode = None
         self._scribblesROINode = None
 
         self.resetPointList(
@@ -1279,7 +1286,11 @@ class MONAILabelWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         segmentEditorWidget.setSegmentationNode(self._segmentNode)
         segmentEditorWidget.setMasterVolumeNode(self._volumeNode)
 
-        self.createScribblesROINode()
+        if self._autoSegROINode is None:
+            self._autoSegROINode = self.createROINode(name="Auto Seg ROI")
+        self.ui.autoSegmentationPlaceWidget.setCurrentNode(self._autoSegROINode)
+        if self._scribblesROINode is None:
+            self._scribblesROINode = self.createROINode(name="Scribbles ROI")
         self.ui.scribblesPlaceWidget.setCurrentNode(self._scribblesROINode)
 
         # check if user allows overlapping segments
@@ -1470,6 +1481,11 @@ class MONAILabelWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
             image_file = self.current_sample["id"]
             params = self.getParamsFromConfig("infer", model)
 
+            roiNode = self.ui.scribblesPlaceWidget.currentNode()
+            if roiNode and roiNode.GetControlPointPlacementComplete():
+                selected_roi = self.getROIPointsXYZ(roiNode)
+                params.update({"roi": selected_roi})
+
             result_file, params = self.logic.infer(model, image_file, params, session_id=self.getSessionId())
             print(f"Result Params for Segmentation: {params}")
 
@@ -1610,18 +1626,17 @@ class MONAILabelWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
             self._segmentNode.SetReferenceImageGeometryParameterFromVolumeNode(self._volumeNode)
             self._segmentNode.SetName(name)
 
-    def createScribblesROINode(self):
+    def createROINode(self, name="Scribbles ROI"):
         if self._volumeNode is None:
-            return
-        if self._scribblesROINode is None:
-            scribblesROINode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsROINode")
-            scribblesROINode.SetName("Scribbles ROI")
-            scribblesROINode.CreateDefaultDisplayNodes()
-            scribblesROINode.GetDisplayNode().SetFillOpacity(0.4)
-            scribblesROINode.GetDisplayNode().SetSelectedColor(1, 1, 1)
-            scribblesROINode.GetDisplayNode().SetColor(1, 1, 1)
-            scribblesROINode.GetDisplayNode().SetActiveColor(1, 1, 1)
-            self._scribblesROINode = scribblesROINode
+            return None
+        scribblesROINode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsROINode")
+        scribblesROINode.SetName(name)
+        scribblesROINode.CreateDefaultDisplayNodes()
+        scribblesROINode.GetDisplayNode().SetFillOpacity(0.4)
+        scribblesROINode.GetDisplayNode().SetSelectedColor(1, 1, 1)
+        scribblesROINode.GetDisplayNode().SetColor(1, 1, 1)
+        scribblesROINode.GetDisplayNode().SetActiveColor(1, 1, 1)
+        return scribblesROINode
 
     def getLabelColor(self, name):
         color = GenericAnatomyColors.get(name.lower())
