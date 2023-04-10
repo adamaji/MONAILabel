@@ -25,6 +25,7 @@ import torch
 import torch.distributed
 from ignite.engine import Events
 from ignite.handlers import EarlyStopping
+from ignite.contrib.handlers.wandb_logger import WandBLogger
 from monai.data import (
     CacheDataset,
     DataLoader,
@@ -302,17 +303,25 @@ class BasicTrainTask(TrainTask):
                     ),
                 ]
             )
-            if context.tracking and context.tracking.lower() == "mlflow":
-                handlers.append(
-                    MLFlowHandler(
-                        tracking_uri=context.tracking_uri,
-                        experiment_name=context.tracking_experiment_name,
-                        run_name=context.tracking_run_name,
-                        iteration_log=True,
-                        output_transform=from_engine(["loss"], first=True),
-                        close_on_complete=True,
+            if context.tracking:
+                if context.tracking.lower() == "mlflow":
+                    handlers.append(
+                        MLFlowHandler(
+                            tracking_uri=context.tracking_uri,
+                            experiment_name=context.tracking_experiment_name,
+                            run_name=context.tracking_run_name,
+                            iteration_log=True,
+                            output_transform=from_engine(["loss"], first=True),
+                            close_on_complete=True,
+                        )
                     )
-                )
+                elif context.tracking.lower() == "wandb":
+                    handlers.append(
+                        WandBLogger(
+                            project=context.tracking_experiment_name,
+                            name=context.tracking_run_name,
+                        )
+                    )
 
         if context.evaluator:
             logger.info(f"{context.local_rank} - Adding Validation to run every '{self._val_interval}' interval")
